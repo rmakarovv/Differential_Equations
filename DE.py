@@ -1,3 +1,4 @@
+import sys
 import PySimpleGUI as sg
 import numpy as np
 import matplotlib.pyplot as plt
@@ -243,7 +244,6 @@ class Toolbar(NavigationToolbar2Tk):
         
 def gui_trial():
     layout = [
-        [sg.Text('Controls')],
         [sg.Text('Choose Method:'), sg.InputCombo(['Euler', 'Improved Euler', 'Runge-Kutta'],\
                                                   default_value ='Euler', size=(20, 3))],
         [sg.Text('x0'), sg.InputText(size=(10, 1))],
@@ -332,8 +332,6 @@ def gui_trial():
 
 
 if __name__ == '__main__':
-    import sys
-
     orig_stdout = sys.stdout
     f = open('output.txt', 'w')
     sys.stdout = f
