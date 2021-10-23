@@ -5,31 +5,33 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 
-def func(x, y):
-    return 3 * y ** (2 / 3)
+class Functions:
+    @staticmethod
+    def function(x, y): raise NotImplementedError
+
+    @staticmethod
+    def exact_function(x): raise NotImplementedError
 
 
-#     return (y ** 2 + x * y - x ** 2) / (x ** 2)
-#     return (y / x + x * np.cos(x))
+class MyFunctions(Functions):
+    @staticmethod
+    def function(x, y):
+        return 3 * y ** (2 / 3)
 
-
-def exact_function(x):
-    return (x - 1) ** 3
-
-
-#     return x * (1 + (x ** 2) / 3) / (1 - (x ** 2) / 3)
-#     return (x * np.sin(x) + x / np.pi)
+    @staticmethod
+    def exact_function(x):
+        return (x - 1) ** 3
 
 
 class ExactSolution:
     @staticmethod
     def exact(h, x0, N):
         x = x0
-        y_vals = [exact_function(x)]
+        y_vals = [MyFunctions.exact_function(x)]
 
         for i in range(N):
             x = x + h
-            y_vals.append(exact_function(x))
+            y_vals.append(MyFunctions.exact_function(x))
 
         return y_vals
 
@@ -43,7 +45,7 @@ class LocalErrors:
         return e_vals
 
 
-class AbstractMethod:
+class NumericalMethod:
     def inner_function(self, x_cur, y_cur): raise NotImplementedError
 
     def method(self, x_values): raise NotImplementedError
@@ -51,7 +53,7 @@ class AbstractMethod:
     def work_method(self): raise NotImplementedError
 
 
-class EulerMethod(AbstractMethod):
+class Euler(NumericalMethod):
     def __init__(self, h, x0, y0, X, N):
         self.h = h
         self.x0 = x0
@@ -60,14 +62,14 @@ class EulerMethod(AbstractMethod):
         self.N = N
 
     def inner_function(self, x_cur, y_cur):
-        return self.h * func(x_cur, y_cur)
+        return self.h * MyFunctions.function(x=x_cur, y=y_cur)
 
     def method(self, x_values):
         y_vals = [self.y0]
         y_cur = self.y0
 
         for i in range(1, len(x_values)):
-            y_cur = y_cur + self.inner_function(x_values[i], y_cur)
+            y_cur = y_cur + self.inner_function(x_cur=x_values[i], y_cur=y_cur)
             y_vals.append(y_cur)
 
         return y_vals
@@ -80,7 +82,7 @@ class EulerMethod(AbstractMethod):
 
         euler_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(self.h, self.x0, self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
 
         local_error_values = LocalErrors.local_Errors(exact_values, euler_values)
 
@@ -89,7 +91,7 @@ class EulerMethod(AbstractMethod):
         return (x_values, euler_values, exact_values, local_error_values, global_error_value)
 
 
-class ImprovedEulerMethod(AbstractMethod):
+class ImprovedEuler(NumericalMethod):
     def __init__(self, h, x0, y0, X, N):
         self.h = h
         self.x0 = x0
@@ -98,8 +100,8 @@ class ImprovedEulerMethod(AbstractMethod):
         self.N = N
 
     def inner_function(self, x_cur, y_cur):
-        k1 = func(x_cur, y_cur)
-        k2 = func(x_cur + self.h, y_cur + self.h * k1)
+        k1 = MyFunctions.function(x=x_cur, y=y_cur)
+        k2 = MyFunctions.function(x=(x_cur + self.h), y=(y_cur + self.h * k1))
         increment = self.h * (k1 + k2) / 2
         return increment
 
@@ -108,7 +110,7 @@ class ImprovedEulerMethod(AbstractMethod):
         y_cur = self.y0
 
         for i in range(1, len(x_values)):
-            y_cur = y_cur + self.inner_function(x_values[i], y_cur)
+            y_cur = y_cur + self.inner_function(x_cur=x_values[i], y_cur=y_cur)
             y_vals.append(y_cur)
 
         return y_vals
@@ -121,16 +123,16 @@ class ImprovedEulerMethod(AbstractMethod):
 
         improved_euler_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(self.h, self.x0, self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
 
         local_error_values = LocalErrors.local_Errors(exact_values, improved_euler_values)
 
         global_error_value = max(local_error_values)
 
-        return x_values, improved_euler_values, exact_values, local_error_values, global_error_value
+        return (x_values, improved_euler_values, exact_values, local_error_values, global_error_value)
 
 
-class RungeKuttaMethod(AbstractMethod):
+class RungeKutta(NumericalMethod):
     def __init__(self, h, x0, y0, X, N):
         self.h = h
         self.x0 = x0
@@ -139,13 +141,13 @@ class RungeKuttaMethod(AbstractMethod):
         self.N = N
 
     def inner_function(self, x_cur, y_cur):
-        k1 = func(x=x_cur, y=y_cur)
-        k2 = func(x=(x_cur + self.h / 2), y=(y_cur + self.h * k1 / 2))
-        k3 = func(x=(x_cur + self.h / 2), y=(y_cur + self.h * k2 / 2))
-        k4 = func(x=(x_cur + self.h), y=(y_cur + self.h * k3))
+        k1 = MyFunctions.function(x=x_cur,                  y=y_cur)
+        k2 = MyFunctions.function(x=(x_cur + self.h / 2),   y=(y_cur + self.h * k1 / 2))
+        k3 = MyFunctions.function(x=(x_cur + self.h / 2),   y=(y_cur + self.h * k2 / 2))
+        k4 = MyFunctions.function(x=(x_cur + self.h),       y=(y_cur + self.h * k3))
 
-        increasment = self.h * (k1 + 2 * k2 + 2 * k3 + k4) / 6
-        return increasment
+        increment = self.h * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        return increment
 
     def method(self, x_values):
         y_vals = [self.y0]
@@ -165,7 +167,7 @@ class RungeKuttaMethod(AbstractMethod):
 
         runge_kutta_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(self.h, self.x0, self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
 
         local_error_values = LocalErrors.local_Errors(exact_values, runge_kutta_values)
 
@@ -196,16 +198,17 @@ class Toolbar(NavigationToolbar2Tk):
         super(Toolbar, self).__init__(*args, **kwargs)
 
 
-def gui_trial():
+def gui():
     layout = [
         [sg.Text('Choose task:'), sg.InputCombo(['Approximation', 'LTE', 'GTE for N'], \
                                                 default_value='Approximation', size=(20, 4))],
         [sg.Text('Mark methods to use:'), sg.Checkbox('Euler'), sg.Checkbox('Improved Euler'), \
          sg.Checkbox('Runge-Kutta')],
-        [sg.Text('x0', size=(2, 1)), sg.InputText(size=(10, 1))],
-        [sg.Text('y0', size=(2, 1)), sg.InputText(size=(10, 1))],
-        [sg.Text('X',  size=(2, 1)), sg.InputText(size=(10, 1))],
-        [sg.Text('N',  size=(2, 1)), sg.InputText(size=(10, 1))],
+        [sg.Text('x0',        size=(2, 1)), sg.InputText(size=(10, 1))],
+        [sg.Text('y0',        size=(2, 1)), sg.InputText(size=(10, 1))],
+        [sg.Text('X',         size=(2, 1)), sg.InputText(size=(10, 1))],
+        [sg.Text('N',         size=(2, 1)), sg.InputText(size=(10, 1)), sg.Text('N_start',   size=(5, 1)), sg.InputText(size=(10, 1)),\
+        sg.Text('N_finish',   size=(6, 1)), sg.InputText(size=(10, 1))],
         [sg.Button('Plot')],
         [sg.Canvas(key='controls_cv')],
         [sg.Text('Figure:')],
@@ -272,7 +275,7 @@ def gui_trial():
                 sg.popup('N should be greater than zero and integer')
                 is_error = 1
 
-        if N == 0:
+        if N <= 0:
             if not is_error:
                 sg.popup('N should be greater than zero and integer')
                 is_error = 1
@@ -281,6 +284,7 @@ def gui_trial():
             if not is_error:
                 sg.popup('X must NOT be equal to x0')
                 is_error = 1
+
 
         if is_error:
             continue
@@ -292,9 +296,9 @@ def gui_trial():
         except:
             h = X - x0
 
-        euler = EulerMethod(h, x0, y0, X, N)
-        improved_euler = ImprovedEulerMethod(h, x0, y0, X, N)
-        runge_kutta = RungeKuttaMethod(h, x0, y0, X, N)
+        euler = Euler(h, x0, y0, X, N)
+        improved_euler = ImprovedEuler(h, x0, y0, X, N)
+        runge_kutta = RungeKutta(h, x0, y0, X, N)
 
         euler_values = euler.work_method()
         improved_euler_values = improved_euler.work_method()
@@ -312,6 +316,32 @@ def gui_trial():
 
             if task not in ['Approximation', 'LTE', 'GTE for N'] and not check_local_error:
                 sg.popup('Unknown task, please change it to the ones that are available')
+                check_local_error = 1
+
+            N_start = -1
+            N_finish = -1
+            if task in ['GTE for N'] and not check_local_error:
+                try:
+                    N_start = int(values[8])
+                except:
+                    if not is_error:
+                        sg.popup('N_start should be greater than zero and integer')
+                        check_local_error = 1
+
+                try:
+                    N_finish = int(values[9])
+                except:
+                    if not is_error:
+                        sg.popup('N_finish should be greater than zero and integer')
+                        check_local_error = 1
+
+                if N_finish > 1000:
+                    if not is_error:
+                        sg.popup('N_finish should not be greater than 1000')
+                        check_local_error = 1
+
+            if task in ['GTE for N'] and (N_start <= 0 or N_finish <= 0 or N_start > N_finish) and not check_local_error:
+                sg.popup('N_start and N_finish should be > 0, and N_start < N_finish')
                 check_local_error = 1
 
             if check_local_error:
@@ -355,14 +385,14 @@ def gui_trial():
                     plt.plot(runge_kutta_values[0], runge_kutta_values[3], 'r', label='Runge Kutta LTE')
 
             elif task == 'GTE for N':
-                sg.popup("Make sure entered value of 'N' is the end of the range for GTE")
-                title = f'GTE for N = [1, {N}]'
+                # sg.popup("Make sure entered value of 'N' is the end of the range for GTE")
+                title = f'GTE for N = [{N_start}, {N_finish}]'
 
                 euler_gte = []
                 improved_euler_gte = []
                 runge_kutta_gte = []
 
-                n_values = list(range(1, N + 1))
+                n_values = list(range(N_start, N_finish + 1))
                 for i in n_values:
                     h_2 = 1
                     try:
@@ -370,9 +400,9 @@ def gui_trial():
                     except ZeroDivisionError:
                         h_2 = 1
 
-                    euler_2 = EulerMethod(h_2, x0, y0, X, i)
-                    improved_euler_2 = ImprovedEulerMethod(h_2, x0, y0, X, i)
-                    runge_kutta_2 = RungeKuttaMethod(h_2, x0, y0, X, i)
+                    euler_2 = Euler(h_2, x0, y0, X, i)
+                    improved_euler_2 = ImprovedEuler(h_2, x0, y0, X, i)
+                    runge_kutta_2 = RungeKutta(h_2, x0, y0, X, i)
 
                     euler_values_2 = euler_2.work_method()
                     improved_euler_values_2 = improved_euler_2.work_method()
@@ -413,7 +443,7 @@ if __name__ == '__main__':
     f = open('output.txt', 'w')
     sys.stdout = f
 
-    gui_trial()
+    gui()
 
     sys.stdout = orig_stdout
     f.close()
