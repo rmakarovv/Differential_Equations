@@ -1,3 +1,10 @@
+#
+#  Numerical methods for solving DE and GUI with graph plotting
+#  implementation.
+#
+#  @author Roman Makarov, BS20_06, o.makarov@innopolis.university
+#
+
 import sys
 import PySimpleGUI as sg
 import numpy as np
@@ -6,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 
 
 class Functions:
+    """Interface for functions"""
     @staticmethod
     def function(x, y): raise NotImplementedError
 
@@ -46,6 +54,7 @@ class LocalErrors:
 
 
 class NumericalMethod:
+    """Interface for numerical methods"""
     def inner_function(self, x_cur, y_cur): raise NotImplementedError
 
     def method(self, x_values): raise NotImplementedError
@@ -176,6 +185,7 @@ class RungeKutta(NumericalMethod):
         return (x_values, runge_kutta_values, exact_values, local_error_values, global_error_value)
 
 
+# Toolbar for figure
 def draw_figure_w_toolbar(canvas, fig, canvas_toolbar):
     if canvas.children:
         for child in canvas.winfo_children():
@@ -280,11 +290,10 @@ def gui():
                 sg.popup('N should be greater than zero and integer')
                 is_error = 1
 
-        if x0 == X:
+        if x0 >= X:
             if not is_error:
-                sg.popup('X must NOT be equal to x0')
+                sg.popup('x0 must be LESS than X')
                 is_error = 1
-
 
         if is_error:
             continue
@@ -295,6 +304,13 @@ def gui():
             h = float((X - x0) / N)
         except:
             h = X - x0
+
+        if h > 1:
+            is_error = 1
+            sg.popup(f'Step must not be greater than 1, current step = {h}')
+
+        if is_error:
+            continue
 
         euler = Euler(h, x0, y0, X, N)
         improved_euler = ImprovedEuler(h, x0, y0, X, N)
@@ -372,7 +388,7 @@ def gui():
                     plt.plot(improved_euler_values[0], improved_euler_values[1], 'y', label='Improved Euler')
 
                 if is_runge_kutta:
-                    plt.plot(runge_kutta_values[0], runge_kutta_values[1], 'r', label='Runge Kutta')
+                    plt.plot(runge_kutta_values[0], runge_kutta_values[1], 'r', label='Runge-Kutta')
 
             elif task == 'LTE':
                 if is_euler:
@@ -382,7 +398,7 @@ def gui():
                     plt.plot(improved_euler_values[0], improved_euler_values[3], 'y', label='Improved Euler LTE')
 
                 if is_runge_kutta:
-                    plt.plot(runge_kutta_values[0], runge_kutta_values[3], 'r', label='Runge Kutta LTE')
+                    plt.plot(runge_kutta_values[0], runge_kutta_values[3], 'r', label='Runge-Kutta LTE')
 
             elif task == 'GTE for N':
                 # sg.popup("Make sure entered value of 'N' is the end of the range for GTE")
@@ -419,7 +435,7 @@ def gui():
                     plt.plot(n_values, improved_euler_gte, 'y', label='Improved Euler GTE')
 
                 if is_runge_kutta:
-                    plt.plot(n_values, runge_kutta_gte, 'r', label='Runge Kutta GTE')
+                    plt.plot(n_values, runge_kutta_gte, 'r', label='Runge-Kutta GTE')
 
                 x_label = 'N'
                 y_label = 'Max GTE'
