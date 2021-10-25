@@ -1,11 +1,16 @@
 #
 #  Numerical methods for solving DE and GUI with graph plotting
 #  implementation.
+# Requirements:
+#   1) numpy (pip install numpy)
+#   2) matplotlib (pip install matplotlib)
+#   3) PySimpleGUI (pip install PySimpleGUI)
 #
 #  @author Roman Makarov, BS20_06, o.makarov@innopolis.university
 #
 
 import sys
+import math
 import PySimpleGUI as sg
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,8 +23,7 @@ class Functions:
     def function(x, y): raise NotImplementedError
 
     @staticmethod
-    def exact_function(x): raise NotImplementedError
-
+    def exact_function(x, C1): raise NotImplementedError
 
 class MyFunctions(Functions):
     @staticmethod
@@ -27,23 +31,24 @@ class MyFunctions(Functions):
         return 3 * y ** (2 / 3)
 
     @staticmethod
-    def exact_function(x):
-        return (x - 1) ** 3
+    def exact_function(x, C1):
+        # change
+        return (x + C1) ** 3
 
-
+# Construction of exact solution for given h and N
 class ExactSolution:
     @staticmethod
-    def exact(h, x0, N):
+    def exact(h, x0, N, C1):
         x = x0
-        y_vals = [MyFunctions.exact_function(x)]
+        y_vals = [MyFunctions.exact_function(x, C1)]
 
         for i in range(N):
             x = x + h
-            y_vals.append(MyFunctions.exact_function(x))
+            y_vals.append(MyFunctions.exact_function(x, C1))
 
         return y_vals
 
-
+# class for calculating local errors for any methods
 class LocalErrors:
     @staticmethod
     def local_Errors(exact_values, given_values):
@@ -63,13 +68,15 @@ class NumericalMethod:
 
 
 class Euler(NumericalMethod):
-    def __init__(self, h, x0, y0, X, N):
+    def __init__(self, h, x0, y0, X, N, C1):
         self.h = h
         self.x0 = x0
         self.y0 = y0
         self.X = X
         self.N = N
+        self.C1 = C1
 
+    # funcion that makes one step according to a method’s implementation
     def inner_function(self, x_cur, y_cur):
         return self.h * MyFunctions.function(x=x_cur, y=y_cur)
 
@@ -91,7 +98,7 @@ class Euler(NumericalMethod):
 
         euler_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N, C1=self.C1)
 
         local_error_values = LocalErrors.local_Errors(exact_values, euler_values)
 
@@ -101,12 +108,13 @@ class Euler(NumericalMethod):
 
 
 class ImprovedEuler(NumericalMethod):
-    def __init__(self, h, x0, y0, X, N):
+    def __init__(self, h, x0, y0, X, N, C1):
         self.h = h
         self.x0 = x0
         self.y0 = y0
         self.X = X
         self.N = N
+        self.C1 = C1
 
     def inner_function(self, x_cur, y_cur):
         k1 = MyFunctions.function(x=x_cur, y=y_cur)
@@ -132,7 +140,7 @@ class ImprovedEuler(NumericalMethod):
 
         improved_euler_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N, C1=self.C1)
 
         local_error_values = LocalErrors.local_Errors(exact_values, improved_euler_values)
 
@@ -142,12 +150,13 @@ class ImprovedEuler(NumericalMethod):
 
 
 class RungeKutta(NumericalMethod):
-    def __init__(self, h, x0, y0, X, N):
+    def __init__(self, h, x0, y0, X, N, C1):
         self.h = h
         self.x0 = x0
         self.y0 = y0
         self.X = X
         self.N = N
+        self.C1 = C1
 
     def inner_function(self, x_cur, y_cur):
         k1 = MyFunctions.function(x=x_cur,                  y=y_cur)
@@ -176,7 +185,7 @@ class RungeKutta(NumericalMethod):
 
         runge_kutta_values = self.method(x_values)
 
-        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N)
+        exact_values = ExactSolution.exact(h=self.h, x0=self.x0, N=self.N, C1=self.C1)
 
         local_error_values = LocalErrors.local_Errors(exact_values, runge_kutta_values)
 
@@ -209,6 +218,8 @@ class Toolbar(NavigationToolbar2Tk):
 
 
 def gui():
+
+    # Launching a GUI
     layout = [
         [sg.Text('Choose task:'), sg.InputCombo(['Approximation', 'LTE', 'GTE for N'], \
                                                 default_value='Approximation', size=(20, 4))],
@@ -237,6 +248,7 @@ def gui():
 
     window = sg.Window('DE approximation with controls', layout)  # '#e7f4f4'
 
+    # Reading values from window and applying necessary acts
     while True:
         event, values = window.read()
 
@@ -245,6 +257,7 @@ def gui():
 
         is_error = 0
 
+        # Collecting and validating obtained values
         task = values[0]
         is_euler = values[1]
         is_improved_euler = values[2]
@@ -285,25 +298,30 @@ def gui():
                 sg.popup('N should be greater than zero and integer')
                 is_error = 1
 
-        if N <= 0:
-            if not is_error:
+        if not is_error:
+            if N <= 0:
                 sg.popup('N should be greater than zero and integer')
                 is_error = 1
 
-        if x0 >= X:
-            if not is_error:
+        if not is_error:
+            if x0 >= X:
                 sg.popup('x0 must be LESS than X')
+                is_error = 1
+
+        if not is_error:
+            if N > 10000:
+                sg.popup('Make N <= 10000, otherwise methods are too precise and too slow')
                 is_error = 1
 
         if is_error:
             continue
 
-        h = X - x0
+        h = abs(X - x0)
 
         try:
-            h = float((X - x0) / N)
+            h = float((abs(X - x0)) / N)
         except:
-            h = X - x0
+            h = abs(X - x0)
 
         if h > 1:
             is_error = 1
@@ -312,26 +330,38 @@ def gui():
         if is_error:
             continue
 
-        euler = Euler(h, x0, y0, X, N)
-        improved_euler = ImprovedEuler(h, x0, y0, X, N)
-        runge_kutta = RungeKutta(h, x0, y0, X, N)
+        # Changing Constant in the solution
+        try:
+            C1 = float((-1 if y0 < 0 else 1) * math.pow(abs(y0), float(1)/3) - x0)
+        except:
+            C1 = -1
+
+        euler = Euler(h, x0, y0, X, N, C1)
+        improved_euler = ImprovedEuler(h, x0, y0, X, N, C1)
+        runge_kutta = RungeKutta(h, x0, y0, X, N, C1)
 
         euler_values = euler.work_method()
         improved_euler_values = improved_euler.work_method()
         runge_kutta_values = runge_kutta.work_method()
 
-        #    return (x_values, runge_kutta_values, exact_values, local_error_value, global_error_values)
-
+        # If the needed action is to plot a graph
         if event == 'Plot':
+            # Verifying obtained values according to the task
             check_local_error = 0
 
-            if task == 'GTE for N':
-                if not is_euler and not is_improved_euler and not is_runge_kutta:
-                    sg.popup('Choose method for which you want to plot GTE')
-                    check_local_error = 1
+            try:
+                if task == 'GTE for N':
+                    if not is_euler and not is_improved_euler and not is_runge_kutta:
+                        sg.popup('Choose method for which you want to plot GTE')
+                        check_local_error = 1
+            except:
+                check_local_error = 1
 
-            if task not in ['Approximation', 'LTE', 'GTE for N'] and not check_local_error:
-                sg.popup('Unknown task, please change it to the ones that are available')
+            try:
+                if task not in ['Approximation', 'LTE', 'GTE for N'] and not check_local_error:
+                    sg.popup('Unknown task, please change it to the ones that are available')
+                    check_local_error = 1
+            except:
                 check_local_error = 1
 
             N_start = -1
@@ -377,7 +407,9 @@ def gui():
                 title = f"Approximation for y' = 3 * y ^ (2 / 3)"
 
                 x_exact = np.linspace(x0, X, 1000)
-                y_exact = np.power(np.subtract(x_exact, 1), 3)
+                # change
+                # y_exact = np.power(np.add(x_exact, -1), 3)
+                y_exact = np.power(np.add(x_exact, C1), 3)
 
                 plt.plot(x_exact, y_exact, 'g', label='exact solution')
 
@@ -401,7 +433,6 @@ def gui():
                     plt.plot(runge_kutta_values[0], runge_kutta_values[3], 'r', label='Runge-Kutta LTE')
 
             elif task == 'GTE for N':
-                # sg.popup("Make sure entered value of 'N' is the end of the range for GTE")
                 title = f'GTE for N = [{N_start}, {N_finish}]'
 
                 euler_gte = []
@@ -416,9 +447,9 @@ def gui():
                     except ZeroDivisionError:
                         h_2 = 1
 
-                    euler_2 = Euler(h_2, x0, y0, X, i)
-                    improved_euler_2 = ImprovedEuler(h_2, x0, y0, X, i)
-                    runge_kutta_2 = RungeKutta(h_2, x0, y0, X, i)
+                    euler_2 = Euler(h_2, x0, y0, X, i, C1)
+                    improved_euler_2 = ImprovedEuler(h_2, x0, y0, X, i, C1)
+                    runge_kutta_2 = RungeKutta(h_2, x0, y0, X, i, C1)
 
                     euler_values_2 = euler_2.work_method()
                     improved_euler_values_2 = improved_euler_2.work_method()
